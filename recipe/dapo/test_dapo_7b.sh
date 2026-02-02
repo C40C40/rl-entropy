@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-project_name='DAPO'
-exp_name='DAPO-Qwen2.5-7B-Math-Test'
+project_name='DAPO-v2'
+exp_name='DAPO-Qwen2.5-7B-Math-baseline'
 
 adv_estimator=grpo
 
@@ -24,23 +24,26 @@ loss_agg_mode="token-mean"
 
 enable_filter_groups=True
 filter_groups_metric=acc
-max_num_gen_batches=10
-train_prompt_bsz=512
-gen_prompt_bsz=$((train_prompt_bsz * 3))
-train_prompt_mini_bsz=32
-n_resp_per_prompt=16
+max_num_gen_batches=20
 
+train_prompt_bsz=96
+gen_prompt_bsz=$((train_prompt_bsz * 2)) 
+train_prompt_mini_bsz=32
+n_resp_per_prompt=8
+
+#Home
+HOME=/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096
 # Ray
 RAY_ADDRESS=${RAY_ADDRESS:-"http://localhost:8265"}
 WORKING_DIR=${WORKING_DIR:-"${PWD}"}
 RUNTIME_ENV=${RUNTIME_ENV:-"${WORKING_DIR}/verl/trainer/runtime_env.yaml"}
-NNODES=${NNODES:-4}
+NNODES=1
 # Paths
 RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
-MODEL_PATH=${MODEL_PATH:-"${RAY_DATA_HOME}/models/Qwen2.5-Math-7B"}
+MODEL_PATH=${MODEL_PATH:-"/inspire/hdd/global_public/public_models/Qwen/Qwen2.5-Math-7B"}
 CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
-TRAIN_FILE=${TRAIN_FILE:-"${RAY_DATA_HOME}/data/dapo-math-17k.parquet"}
-TEST_FILE=${TEST_FILE:-"${RAY_DATA_HOME}/data/aime-2024.parquet"}
+TRAIN_FILE=${TRAIN_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/dapo-math-17k.parquet"}
+TEST_FILE=${TEST_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/aime-2024.parquet"}
 
 # Algorithm
 temperature=1.0
@@ -52,6 +55,9 @@ use_dynamic_bsz=True
 infer_micro_batch_size=null
 train_micro_batch_size=null
 offload=False
+
+mkdir -p "${CKPTS_DIR}"
+mkdir -p "${CKPTS_DIR}/tb_logs"
 
 ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     --working-dir "${WORKING_DIR}" \
@@ -118,14 +124,14 @@ ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     reward_model.overlong_buffer.enable=${enable_overlong_buffer} \
     reward_model.overlong_buffer.len=${overlong_buffer_len} \
     reward_model.overlong_buffer.penalty_factor=${overlong_penalty_factor} \
-    trainer.logger='["console","wandb"]' \
+    trainer.logger='["console", "tensorboard"]' \
     trainer.project_name="${project_name}" \
     trainer.experiment_name="${exp_name}" \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes="${NNODES}" \
     trainer.val_before_train=True \
     trainer.test_freq=2 \
-    trainer.save_freq=2 \
+    trainer.save_freq=0 \
     trainer.total_epochs=1 \
     trainer.default_local_dir="${CKPTS_DIR}" \
     trainer.resume_mode=disable

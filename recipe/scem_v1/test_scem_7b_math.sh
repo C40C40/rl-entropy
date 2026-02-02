@@ -1,37 +1,27 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
-
-project_name='DAPO'
-exp_name='DAPO-Qwen2.5-7B-Math-reg-logic-0.3'
-
-
+project_name='SCEM'
+exp_name='SCEM-Qwen2.5-7B-Math'
 adv_estimator=grpo
-
 use_kl_in_reward=False
 kl_coef=0.0
 use_kl_loss=False
 kl_loss_coef=0.0
-
 clip_ratio_low=0.2
 clip_ratio_high=0.28
-
 max_prompt_length=$((1024 * 2))
 max_response_length=$((1024 * 2))
 enable_overlong_buffer=True
 overlong_buffer_len=512
 overlong_penalty_factor=1.0
-
 loss_agg_mode="token-mean"
-
-enable_filter_groups=True
+enable_filter_groups=False
 filter_groups_metric=acc
-max_num_gen_batches=20
-
+max_num_gen_batches=0
 train_prompt_bsz=96
-gen_prompt_bsz=$((train_prompt_bsz * 2)) 
+gen_prompt_bsz=$((train_prompt_bsz * 2))
 train_prompt_mini_bsz=32
-n_resp_per_prompt=8
-
+n_resp_per_prompt=16
 #Home
 HOME=/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096
 # Ray
@@ -45,12 +35,15 @@ MODEL_PATH=${MODEL_PATH:-"/inspire/hdd/global_public/public_models/Qwen/Qwen2.5-
 CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
 TRAIN_FILE=${TRAIN_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/dapo-math-17k.parquet"}
 TEST_FILE=${TEST_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/aime-2024.parquet"}
-
+RAY_LOG_DIR="${CKPTS_DIR}/ray_logs"
+mkdir -p "${RAY_LOG_DIR}"
+# 设置 TensorBoard 日志目录
+export TENSORBOARD_DIR="${CKPTS_DIR}/tb_logs"
+export HYDRA_FULL_ERROR=1
 # Algorithm
 temperature=1.0
 top_p=1.0
 top_k=-1 # 0 for HF rollout, -1 for vLLM rollout
-
 # Mathematically equivalent
 use_dynamic_bsz=True
 infer_micro_batch_size=null
@@ -60,9 +53,9 @@ offload=False
 mkdir -p "${CKPTS_DIR}"
 mkdir -p "${CKPTS_DIR}/tb_logs"
 
-ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
+ray job submit --runtime-env="${RUNTIME_ENV}" \
     --working-dir "${WORKING_DIR}" \
-    -- python3 -m recipe.dapo.main_dapo_reg \
+    -- python3 -m recipe.scem.main_scem \
     data.train_files="${TRAIN_FILE}" \
     data.val_files="${TEST_FILE}" \
     data.prompt_key=prompt \
@@ -121,7 +114,7 @@ ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     actor_rollout_ref.ref.fsdp_config.param_offload=${offload} \
     actor_rollout_ref.ref.ulysses_sequence_parallel_size=1 \
     actor_rollout_ref.actor.fsdp_config.fsdp_size=-1 \
-    reward_model.reward_manager=dapo \
+    reward_model.reward_manager=scem \
     reward_model.overlong_buffer.enable=${enable_overlong_buffer} \
     reward_model.overlong_buffer.len=${overlong_buffer_len} \
     reward_model.overlong_buffer.penalty_factor=${overlong_penalty_factor} \
@@ -131,14 +124,9 @@ ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     trainer.n_gpus_per_node=8 \
     trainer.nnodes="${NNODES}" \
     trainer.val_before_train=True \
-    trainer.test_freq=2 \
-    trainer.save_freq=0 \
+    trainer.test_freq=5 \
+    trainer.save_freq=10 \
     trainer.total_epochs=1 \
     trainer.default_local_dir="${CKPTS_DIR}" \
     trainer.resume_mode=disable \
-    algorithm.entropy_budget.enable=True \
-    algorithm.entropy_budget.lam=0.01 \
-    algorithm.entropy_budget.keyword_weight.logic=3.0 \
-    algorithm.entropy_budget.keyword_weight.answer=1.5 \
-    algorithm.entropy_budget.keyword_weight.format=1.2 \
-    algorithm.entropy_budget.keyword_weight.normal=1.0 
+    algorithm.entropy_budget.enable=True

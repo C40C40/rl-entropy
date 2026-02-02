@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-project_name='DAPO'
-exp_name='DAPO-Qwen2.5-7B-Math-reg-logic-0.3'
+project_name='DAPO-v2'
+exp_name='DAPO-Qwen2.5-7B-Math-neg'
 
 
 adv_estimator=grpo
@@ -46,6 +46,12 @@ CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
 TRAIN_FILE=${TRAIN_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/dapo-math-17k.parquet"}
 TEST_FILE=${TEST_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/aime-2024.parquet"}
 
+RAY_LOG_DIR="${CKPTS_DIR}/ray_logs"
+mkdir -p "${RAY_LOG_DIR}"
+
+# 设置 TensorBoard 日志目录
+export TENSORBOARD_DIR="${CKPTS_DIR}/tb_logs"
+
 # Algorithm
 temperature=1.0
 top_p=1.0
@@ -62,7 +68,7 @@ mkdir -p "${CKPTS_DIR}/tb_logs"
 
 ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     --working-dir "${WORKING_DIR}" \
-    -- python3 -m recipe.dapo.main_dapo_reg \
+    -- python3 -m recipe.dapo.main_dapo_neg \
     data.train_files="${TRAIN_FILE}" \
     data.val_files="${TEST_FILE}" \
     data.prompt_key=prompt \
@@ -137,8 +143,3 @@ ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     trainer.default_local_dir="${CKPTS_DIR}" \
     trainer.resume_mode=disable \
     algorithm.entropy_budget.enable=True \
-    algorithm.entropy_budget.lam=0.01 \
-    algorithm.entropy_budget.keyword_weight.logic=3.0 \
-    algorithm.entropy_budget.keyword_weight.answer=1.5 \
-    algorithm.entropy_budget.keyword_weight.format=1.2 \
-    algorithm.entropy_budget.keyword_weight.normal=1.0 

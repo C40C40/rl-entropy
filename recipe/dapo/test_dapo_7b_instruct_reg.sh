@@ -2,7 +2,7 @@
 set -xeuo pipefail
 
 project_name='DAPO'
-exp_name='DAPO-Qwen2.5-7B-Math-reg-logic-0.3'
+exp_name='DAPO-Qwen2.5-7B-Math-reg-lam0.05'
 
 
 adv_estimator=grpo
@@ -137,8 +137,8 @@ ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     trainer.default_local_dir="${CKPTS_DIR}" \
     trainer.resume_mode=disable \
     algorithm.entropy_budget.enable=True \
-    algorithm.entropy_budget.lam=0.01 \
-    algorithm.entropy_budget.keyword_weight.logic=3.0 \
+    algorithm.entropy_budget.lam=0.05 \
+    algorithm.entropy_budget.keyword_weight.logic=2.0 \
     algorithm.entropy_budget.keyword_weight.answer=1.5 \
     algorithm.entropy_budget.keyword_weight.format=1.2 \
     algorithm.entropy_budget.keyword_weight.normal=1.0 

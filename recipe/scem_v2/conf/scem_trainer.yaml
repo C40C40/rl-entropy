@@ -10,7 +10,7 @@ data:
   gen_batch_size: ${data.train_batch_size}
 
 reward_model:
-  reward_manager: dapo
+  reward_manager: naive
   overlong_buffer: 
     enable: False # We try to avoid forgetting to set enable
     len: 0
@@ -24,15 +24,4 @@ algorithm:
     metric: null # acc / score / seq_reward / seq_final_reward / ...
     max_num_gen_batches: 0 # Non-positive values mean no upper limit
 
-  entropy_budget:
-      enable: True
-      lam: 0.001
-      beta: 0.001
-      keyword_weight:
-        logic: 2.0
-        answer: 1.5
-        format: 1.2
-        normal: 1.0
 
-trainer:
-  project_name: verl-dapo

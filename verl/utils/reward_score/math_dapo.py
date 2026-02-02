@@ -178,16 +178,31 @@ def is_correct_minerva(
     """
     # Extract answer from solution
     match = re.findall(answer_pattern, solution_str)
-    extracted_answer = match[-1] if match else "[INVALID]"
-    pred = normalize_final_answer(extracted_answer)
+    if match:
+        pred = normalize_final_answer(match[-1])
+    else:
+        # Fallback: last \boxed{...}
+        boxed = last_boxed_only_string(solution_str)
+        if boxed is not None:
+            pred = normalize_final_answer(remove_boxed(boxed))
+        else:
+            pred = "[INVALID]"
 
     # Process ground truth
-    if gt_need_extract:
-        gt = normalize_final_answer(remove_boxed(last_boxed_only_string(gt)))
+    if gt_need_extract or ("\\boxed{" in gt):
+        boxed_gt = last_boxed_only_string(gt)
+        if boxed_gt is not None:
+            gt = normalize_final_answer(remove_boxed(boxed_gt))
+        else:
+            gt = normalize_final_answer(gt)
     else:
         gt = normalize_final_answer(gt)
 
-    return (pred == gt), pred
+    # Numeric equivalence (e.g., "540" vs "540.0")
+    try:
+        return (float(pred) == float(gt)), pred
+    except Exception:
+        return (pred == gt), pred
 
 
 def is_correct_strict_box(
@@ -257,10 +272,20 @@ def compute_score(
         Reward score (1.0 for correct, -1.0 for incorrect)
     """
     # Limit solution length for efficiency
-    solution_str = solution_str[-300:]  # The longest answer in MATH-500 has 159 characters
+    tail_str = solution_str[-300:]  # The longest answer in MATH-500 has 159 characters
 
-    # Verify the solution
-    correct, pred = verify(solution_str, ground_truth, strict_box_verify, pause_tokens_index)
+    # Verify the solution (try tail first)
+    correct, pred = verify(tail_str, ground_truth, strict_box_verify, pause_tokens_index)
+
+    # If tail failed to even extract, retry with full solution
+    if pred == "[INVALID]":
+        correct, pred = verify(solution_str, ground_truth, strict_box_verify, pause_tokens_index)
+
+    # If still incorrect, force strict box verify as a final fallback
+    if not correct:
+        strict_correct, strict_pred = verify(tail_str, ground_truth, True, pause_tokens_index)
+        if strict_correct:
+            correct, pred = strict_correct, strict_pred
 
     reward = 1.0 if correct else -1.0
     acc = correct

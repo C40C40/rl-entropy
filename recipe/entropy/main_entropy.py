@@ -22,6 +22,8 @@ from omegaconf import OmegaConf
 from .entropy_ray_trainer import RayEntropyTrainer
 from .reward import load_reward_manager
 
+import os
+os.environ["PYTHONPATH"] = "/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/math_verify_pkg:" + os.environ.get("PYTHONPATH","")
 
 @hydra.main(config_path="config", config_name="entropy_trainer", version_base=None)
 def main(config):
@@ -37,6 +39,8 @@ def run_ppo(config) -> None:
                 "NCCL_DEBUG": "WARN",
                 "VLLM_LOGGING_LEVEL": "WARN",
                 "WANDB_API_KEY": "YOUR_WANDB_API_KEY",
+                "PYTHONPATH": "/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/math_verify_pkg:" + os.environ.get("PYTHONPATH", "")
+
             }
         }
         ray_init_kwargs = config.ray_kwargs.get("ray_init", {})

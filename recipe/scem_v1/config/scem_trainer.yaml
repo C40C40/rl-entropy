@@ -10,7 +10,7 @@ data:
   gen_batch_size: ${data.train_batch_size}
 
 reward_model:
-  reward_manager: dapo
+  reward_manager: naive
   overlong_buffer: 
     enable: False # We try to avoid forgetting to set enable
     len: 0
@@ -35,4 +35,4 @@ algorithm:
         normal: 1.0
 
 trainer:
-  project_name: verl-dapo
+  project_name: verl-scem

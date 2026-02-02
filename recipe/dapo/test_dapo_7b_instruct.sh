@@ -2,7 +2,7 @@
 set -xeuo pipefail
 
 project_name='DAPO'
-exp_name='DAPO-Qwen2.5-7B-Math-reg-logic-0.3'
+exp_name='DAPO-Qwen2.5-7B-Baseline1'
 
 
 adv_estimator=grpo
@@ -25,10 +25,9 @@ loss_agg_mode="token-mean"
 
 enable_filter_groups=True
 filter_groups_metric=acc
-max_num_gen_batches=20
-
+max_num_gen_batches=10
 train_prompt_bsz=96
-gen_prompt_bsz=$((train_prompt_bsz * 2)) 
+gen_prompt_bsz=$((train_prompt_bsz * 2))
 train_prompt_mini_bsz=32
 n_resp_per_prompt=8
 
@@ -41,7 +40,7 @@ RUNTIME_ENV=${RUNTIME_ENV:-"${WORKING_DIR}/verl/trainer/runtime_env.yaml"}
 NNODES=1
 # Paths
 RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
-MODEL_PATH=${MODEL_PATH:-"/inspire/hdd/global_public/public_models/Qwen/Qwen2.5-Math-7B"}
+MODEL_PATH=${MODEL_PATH:-"/inspire/hdd/global_public/public_models/Qwen/Qwen2.5-7B"}
 CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
 TRAIN_FILE=${TRAIN_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/dapo-math-17k.parquet"}
 TEST_FILE=${TEST_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/aime-2024.parquet"}
@@ -62,7 +61,7 @@ mkdir -p "${CKPTS_DIR}/tb_logs"
 
 ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     --working-dir "${WORKING_DIR}" \
-    -- python3 -m recipe.dapo.main_dapo_reg \
+    -- python3 -m recipe.dapo.main_dapo \
     data.train_files="${TRAIN_FILE}" \
     data.val_files="${TEST_FILE}" \
     data.prompt_key=prompt \
@@ -135,10 +134,10 @@ ray job submit --no-wait --runtime-env="${RUNTIME_ENV}" \
     trainer.save_freq=0 \
     trainer.total_epochs=1 \
     trainer.default_local_dir="${CKPTS_DIR}" \
-    trainer.resume_mode=disable \
-    algorithm.entropy_budget.enable=True \
+    trainer.resume_mode=disable
+    algorithm.entropy_budget.enable=False \
     algorithm.entropy_budget.lam=0.01 \
-    algorithm.entropy_budget.keyword_weight.logic=3.0 \
+    algorithm.entropy_budget.keyword_weight.logic=2.0 \
     algorithm.entropy_budget.keyword_weight.answer=1.5 \
     algorithm.entropy_budget.keyword_weight.format=1.2 \
     algorithm.entropy_budget.keyword_weight.normal=1.0 

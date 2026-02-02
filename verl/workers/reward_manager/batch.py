@@ -18,8 +18,10 @@ from typing import Any
 import torch
 
 from verl import DataProto
-from verl.workers.reward_manager import register
-from verl.workers.reward_manager.abstract import AbstractRewardManager, RawRewardFn
+from verl.workers.reward_manager.abstract import (AbstractRewardManager,
+                                                  RawRewardFn)
+
+from .registry import register
 
 
 @register("batch")

@@ -19,8 +19,9 @@ import torch
 
 from verl import DataProto
 from verl.utils.reward_score import default_compute_score
-from verl.workers.reward_manager import register
 from verl.workers.reward_manager.abstract import AbstractRewardManager
+
+from .registry import register
 
 
 @register("naive")

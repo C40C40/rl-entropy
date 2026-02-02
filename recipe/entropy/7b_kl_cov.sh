@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
-export WANDB_API_KEY=YOUR_WANDB_API_KEY
 # export VLLM_USE_V1=1
 
-project_name='Qwen2.5-7B'
+project_name='Qwen2.5-7B-Instruct'
 exp_name='klcov'
 
 adv_estimator=grpo
@@ -18,33 +17,35 @@ clip_ratio_low=0.2
 clip_ratio_high=0.2
 
 max_prompt_length=$((1024 * 2))
-max_response_length=$((1024 * 8))
+max_response_length=$((1024 * 2))
 enable_overlong_buffer=False
 overlong_buffer_len=$((1024 * 2))
 overlong_penalty_factor=1.0
 
-loss_agg_mode="token-mean"
+loss_agg_mode="seq-mean-token-sum"
 loss_mode="kl_cov"
-enable_filter_groups=True
+enable_filter_groups=False
 filter_groups_metric=acc
 max_num_gen_batches=10
-train_prompt_bsz=256
-gen_prompt_bsz=$((train_prompt_bsz * 3))
+train_prompt_bsz=96
+gen_prompt_bsz=$((train_prompt_bsz * 2))
 train_prompt_mini_bsz=32
-n_resp_per_prompt=8
+n_resp_per_prompt=4
 max_token=30720
 
+#Home
+HOME=/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096
 # Ray
 RAY_ADDRESS=${RAY_ADDRESS:-"http://localhost:8265"}
 WORKING_DIR=${WORKING_DIR:-"${PWD}"}
 RUNTIME_ENV=${RUNTIME_ENV:-"${WORKING_DIR}/verl/trainer/runtime_env.yaml"}
-NNODES=${NNODES:-4}
+NNODES=1
 # Paths
 RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
-MODEL_PATH=${MODEL_PATH:-"/YOUR_MODELPATH"}
-CKPTS_DIR=${CKPTS_DIR:-"/YOUR_CKPTS_PATH"}
-TRAIN_FILE=${TRAIN_FILE:-"/YOUR_TRAIN_FILE_PATH"}
-TEST_FILE=${TEST_FILE:-["/YOUR_TRAIN_FILE_PATH"]}
+MODEL_PATH=${MODEL_PATH:-"/inspire/hdd/global_public/public_models/Qwen/Qwen2.5-Math-7B-Instruct"}
+CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
+TRAIN_FILE=${TRAIN_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/dapo-math-17k.parquet"}
+TEST_FILE=${TEST_FILE:-"/inspire/hdd/project/wuliqifa/zhangshenao-CZXS25250096/verl/data/aime-2024.parquet"}
 
 # Algorithm
 temperature=1.0
@@ -58,6 +59,11 @@ use_dynamic_bsz=True
 infer_micro_batch_size=null
 train_micro_batch_size=null
 offload=False
+
+mkdir -p "${CKPTS_DIR}"
+mkdir -p "${CKPTS_DIR}/tb_logs"
+
+export TENSORBOARD_LOGDIR="${CKPTS_DIR}/tb_logs"
 
 HYDRA_FULL_ERROR=1 python -m recipe.entropy.main_entropy \
     data.train_files="${TRAIN_FILE}" \
@@ -129,7 +135,7 @@ HYDRA_FULL_ERROR=1 python -m recipe.entropy.main_entropy \
     reward_model.overlong_buffer.enable=${enable_overlong_buffer} \
     reward_model.overlong_buffer.len=${overlong_buffer_len} \
     reward_model.overlong_buffer.penalty_factor=${overlong_penalty_factor} \
-    trainer.logger='["console","wandb"]' \
+    trainer.logger='["console","tensorboard"]' \
     trainer.project_name="${project_name}" \
     trainer.experiment_name="${exp_name}" \
     trainer.n_gpus_per_node=8 \
